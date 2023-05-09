@@ -76,12 +76,12 @@ router.post("/login/forgetpassword", async function (request, response) {
     const sender = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "jayajaikithuja@gmail.com",
-        pass: "hldukgbduscmwhsp",
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
       },
     });
     const composeMail = {
-      from: "jayajaikithuja@gmail.com",
+      from: process.env.EMAIL,
       to: email,
       subject: "OTP for Reset Password",
       text: `OTP Number :${randomNumber}`,
