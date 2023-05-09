@@ -1,5 +1,12 @@
 import express from "express";
-import { createUsers, getUserByName, updateOtp } from "../service/users.service.js";
+import {
+  createUsers,
+  getUserByName,
+  updateOtp,
+  getOtp,
+  deleteOtp,
+  updatePassword,
+} from "../service/users.service.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
@@ -14,21 +21,21 @@ async function generateHashedPassword(password) {
   console.log(hashedPassword);
   return hashedPassword;
 }
-router.post("/signup",express.json(), async function (request, response) {
-  const { username,email, password } = request.body;
+router.post("/signup", express.json(), async function (request, response) {
+  const { username, email, password } = request.body;
   const userFromDB = await getUserByName(email);
   console.log(userFromDB);
   if (userFromDB) {
     response.status(400).send({ message: "Email already exists" });
-  } else if (password.length < 8) {
+  } else if (password.length < 6) {
     response
       .status(400)
-      .send({ message: "password must be at least 8 characters" });
+      .send({ message: "password must be at least 6 characters" });
   } else {
     const hashedPassword = await generateHashedPassword(password);
     const result = await createUsers({
       username: username,
-      email:email,
+      email: email,
       password: hashedPassword,
     });
     response.send(result);
@@ -57,7 +64,6 @@ router.post("/login", async function (request, response) {
   }
 });
 
-
 router.post("/login/forgetpassword", async function (request, response) {
   const { email } = request.body;
   const userFromDB = await getUserByName(email);
@@ -65,7 +71,7 @@ router.post("/login/forgetpassword", async function (request, response) {
     response.status(401).send({ message: "invalid credentials" });
   } else {
     const randomNumber = Math.floor(100000 + Math.random() * 900000);
-    
+
     const setOtp = updateOtp(email, randomNumber);
     const sender = nodemailer.createTransport({
       service: "gmail",
@@ -78,9 +84,9 @@ router.post("/login/forgetpassword", async function (request, response) {
       from: "jayajaikithuja@gmail.com",
       to: email,
       subject: "OTP for Reset Password",
-      text: `${randomNumber}`,
+      text: `OTP Number :${randomNumber}`,
     };
-    sender.sendMail(composeMail, (error, info) => {
+    sender.sendMail(composeMail, function (error, info) {
       if (error) {
         console.log(error);
       } else {
@@ -90,8 +96,8 @@ router.post("/login/forgetpassword", async function (request, response) {
   }
   response.status(200).send({ message: "OTP sent successfully" });
 });
-router.post("/verifyotp",async function(request,response){
-  const{OTP}= data.body;
+router.post("/verifyotp", async function (request, response) {
+  const { OTP } = request.body;
   const otp = parseInt(OTP);
   const otpFromDB = await getOtp(otp);
   if (otpFromDB === null) {
@@ -100,25 +106,19 @@ router.post("/verifyotp",async function(request,response){
     const deleteOtpDB = await deleteOtp(otp);
     response.status(200).send({ message: "OTP verified successfully" });
   }
-})
+});
 router.post("/setpassword", express.json(), async function (request, response) {
   try {
     const { email, password } = request.body;
     const userFromDb = await getUserByName(email);
-    // check email exists
+
     if (!userFromDb) {
       response.status(401).send({ message: "Invalid Credentials" });
-    }
-
-    //set password length for security purposes
-    else if (password.length < 8) {
+    } else if (password.length < 6) {
       response
         .status(400)
-        .send({ message: "Password must be at least 8 characters" });
-    }
-
-    //all condition passed allowed add user with hash value
-    else {
+        .send({ message: "Password must be at least 6 characters" });
+    } else {
       const hashedPassword = await generateHashedPassword(password);
       const result = await updatePassword(email, hashedPassword);
 
